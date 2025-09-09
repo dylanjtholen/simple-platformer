@@ -2,11 +2,16 @@
 	{"x": 100, "y": 750, "width": 50, "height": 50, "type": "start"},
 	{"x": 1500, "y": 750, "width": 50, "height": 50, "type": "goal"},
 	{"x": 600, "y": 750, "width": 50, "height": 50, "type": "bounce"},
+	{"x": 700, "y": 750, "width": 50, "height": 50, "type": "bounce"},
 	{"x": 0, "y": 0, "width": 20, "height": 2000, "type": "platform"},
 	{"x": 1980, "y": 0, "width": 20, "height": 2000, "type": "platform"},
 	{"x": 0, "y": 0, "width": 2000, "height": 20, "type": "platform"},
-	{"x": 0, "y": 800, "width": 2000, "height": 20, "type": "platform"},
+	{"x": 0, "y": 800, "width": 700, "height": 20, "type": "platform"},
+	{"x": 700, "y": 800, "width": 1300, "height": 20, "type": "hazard"},
 	{"x": 300, "y": 700, "width": 100, "height": 100, "type": "platform"},
 	{"x": 800, "y": 600, "width": 100, "height": 200, "type": "platform"},
-	{"x": 400, "y": 600, "width": 200, "height": 20, "type": "platform"}
+	{"x": 400, "y": 600, "width": 300, "height": 20, "type": "hazard"},
+	{"x": 1200, "y": 500, "width": 100, "height": 20, "type": "platform"},
+	{"x": 1450, "y": 500, "width": 30, "height": 300, "type": "hazard"},
+	{"x": 1575, "y": 500, "width": 30, "height": 300, "type": "hazard"}
 ]

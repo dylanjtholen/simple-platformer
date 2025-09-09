@@ -11,6 +11,24 @@ let offsetY = 0;
 const winImg = new Image();
 winImg.src = 'win.png';
 
+const winHardmodeImg = new Image();
+winHardmodeImg.src = 'win-hard.png';
+
+const startButton = document.getElementById('startButton');
+const hardmodeButton = document.getElementById('hardmodeButton');
+const menu = document.getElementById('menu');
+
+startButton.onclick = () => {
+	menu.style.display = 'none';
+	loop();
+};
+
+hardmodeButton.onclick = () => {
+	menu.style.display = 'none';
+	game.hardmode = true;
+	loop();
+};
+
 function resizeCanvas() {
 	canvas.width = window.innerWidth;
 	canvas.height = window.innerHeight;
@@ -25,7 +43,7 @@ function resizeCanvas() {
 window.addEventListener('resize', resizeCanvas);
 resizeCanvas();
 
-const editorMode = true;
+const editorMode = false;
 let editorPlacing = {
 	x: 0,
 	y: 0,
@@ -45,7 +63,7 @@ for (let i = 0; i <= levelcount; i++) {
 const game = {
 	player: {
 		velocity: {x: 0, y: 0},
-		position: {x: platforms[0][0].x, y: platforms[0][0].y},
+		position: {x: platforms[currentLevel][0].x, y: platforms[currentLevel][0].y},
 		width: 50,
 		height: 50,
 		speed: 3,
@@ -53,21 +71,29 @@ const game = {
 		onGround: false,
 		coyote: 0,
 	},
-	platforms: platforms[0],
+	hardmode: false,
+	platforms: platforms[currentLevel],
 	win: false,
 };
 
+let lastFrameTime = Date.now();
+let deltaTime = 0;
+
 function loop() {
+	const currentTime = Date.now();
+	deltaTime = (currentTime - lastFrameTime) / (1000 / 60);
+	//not actually delta time but stfu
+	lastFrameTime = currentTime;
+
 	if (game.win) {
-		c.drawImage(winImg, 0, 0, canvas.width, canvas.height);
+		if (game.hardmode) c.drawImage(winHardmodeImg, 0, 0, canvas.width, canvas.height);
+		else c.drawImage(winImg, 0, 0, canvas.width, canvas.height);
 		return;
 	}
 	update();
 	draw();
 	requestAnimationFrame(loop);
 }
-
-requestAnimationFrame(loop);
 
 function drawPlatform(platform) {
 	switch (platform.type) {
@@ -214,10 +240,10 @@ function physics() {
 	collideSpecial();
 
 	if (keys.left) {
-		player.velocity.x -= player.speed;
+		player.velocity.x -= player.speed * deltaTime;
 	}
 	if (keys.right) {
-		player.velocity.x += player.speed;
+		player.velocity.x += player.speed * deltaTime;
 	}
 	player.velocity.x *= player.onGround ? 0.8 : 0.85;
 	if (Math.abs(player.velocity.x) < 0.1) player.velocity.x = 0;
@@ -232,10 +258,10 @@ function physics() {
 		player.coyote = 10;
 	} else {
 		player.onGround = false;
-		player.velocity.y += 1;
+		player.velocity.y += 1 * deltaTime;
 	}
 
-	player.coyote--;
+	player.coyote -= deltaTime;
 	if (keys.jump && (player.onGround || player.coyote > 0)) {
 		player.velocity.y = -player.jumpStrength;
 		player.onGround = false;
@@ -246,7 +272,7 @@ function physics() {
 		player.velocity.y = 0;
 	}
 
-	player.position.y += player.velocity.y;
+	player.position.y += player.velocity.y * deltaTime;
 }
 
 function collideSpecial() {
@@ -255,8 +281,15 @@ function collideSpecial() {
 		if (player.position.x < platform.x + platform.width && player.position.x + player.width > platform.x && player.position.y < platform.y + platform.height && player.position.y + player.height > platform.y) {
 			switch (platform.type) {
 				case 'hazard':
-					player.position = {x: playerStartPos.x, y: playerStartPos.y};
-					player.velocity = {x: 0, y: 0};
+					if (game.hardmode) {
+						currentLevel = 0;
+						game.platforms = platforms[currentLevel];
+						game.player.position = {x: game.platforms[0].x, y: game.platforms[0].y};
+						game.player.velocity = {x: 0, y: 0};
+					} else {
+						player.position = {x: game.platforms[0].x, y: game.platforms[0].y};
+						player.velocity = {x: 0, y: 0};
+					}
 					break;
 				case 'goal':
 					currentLevel++;
