@@ -26,11 +26,13 @@ const game = {
 		speed: 3,
 		jumpStrength: 15,
 		onGround: false,
+		coyote: 0,
 	},
 	platforms: [
 		{x: 0, y: 800, width: 2000, height: 20},
 		{x: 300, y: 700, width: 100, height: 100},
 		{x: 800, y: 600, width: 100, height: 200},
+		{x: 400, y: 600, width: 200, height: 20},
 	],
 };
 
@@ -93,12 +95,21 @@ function physics() {
 	if (collideFloor()) {
 		player.onGround = true;
 		player.velocity.y = 0;
-		if (keys.jump) {
-			player.velocity.y = -player.jumpStrength;
-			player.onGround = false;
-		}
+		player.coyote = 10;
 	} else {
+		player.onGround = false;
 		player.velocity.y += 1;
+	}
+
+	player.coyote--;
+	if (keys.jump && (player.onGround || player.coyote > 0)) {
+		player.velocity.y = -player.jumpStrength;
+		player.onGround = false;
+		player.coyote = 0;
+	}
+
+	if (collideCeilings()) {
+		player.velocity.y = 0;
 	}
 
 	player.position.y += player.velocity.y;
@@ -127,6 +138,17 @@ function collideWalls() {
 				player.position.x = platform.x + platform.width;
 				return true;
 			}
+		}
+	}
+	return false;
+}
+
+function collideCeilings() {
+	const player = game.player;
+	for (const platform of game.platforms) {
+		if (player.position.x < platform.x + platform.width && player.position.x + player.width > platform.x && player.position.y + Math.min(player.velocity.y, -10) < platform.y + platform.height && player.position.y + Math.min(player.velocity.y, -10) + player.height > platform.y && player.velocity.y < 0) {
+			player.position.y = platform.y + platform.height;
+			return true;
 		}
 	}
 	return false;
