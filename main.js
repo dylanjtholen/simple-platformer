@@ -1,21 +1,51 @@
+const VIRTUAL_WIDTH = 1920;
+const VIRTUAL_HEIGHT = 1080;
 const canvas = document.getElementById('canvas');
 const c = canvas.getContext('2d');
+c.imageSmoothingEnabled = false;
+
+let scale = 1;
+let offsetX = 0;
+let offsetY = 0;
+
+const winImg = new Image();
+winImg.src = 'win.png';
 
 function resizeCanvas() {
 	canvas.width = window.innerWidth;
 	canvas.height = window.innerHeight;
+	// Calculate scale and offsets for letterboxing
+	const scaleX = canvas.width / VIRTUAL_WIDTH;
+	const scaleY = canvas.height / VIRTUAL_HEIGHT;
+	scale = Math.min(scaleX, scaleY);
+	offsetX = (canvas.width - VIRTUAL_WIDTH * scale) / 2;
+	offsetY = (canvas.height - VIRTUAL_HEIGHT * scale) / 2;
 }
 
 window.addEventListener('resize', resizeCanvas);
 resizeCanvas();
 
-const res = await fetch('platforms.json');
-const platforms = await res.json();
+const editorMode = true;
+let editorPlacing = {
+	x: 0,
+	y: 0,
+	isPlacing: false,
+	type: 'platform',
+};
+
+const platforms = [];
+const levelcount = 2; //number of levels available
+let currentLevel = 0;
+
+for (let i = 0; i <= levelcount; i++) {
+	const res = await fetch(`l${i}.json`);
+	platforms[i] = await res.json();
+}
 
 const game = {
 	player: {
 		velocity: {x: 0, y: 0},
-		position: {x: 100, y: 700},
+		position: {x: platforms[0][0].x, y: platforms[0][0].y},
 		width: 50,
 		height: 50,
 		speed: 3,
@@ -23,10 +53,15 @@ const game = {
 		onGround: false,
 		coyote: 0,
 	},
-	platforms: platforms,
+	platforms: platforms[0],
+	win: false,
 };
 
 function loop() {
+	if (game.win) {
+		c.drawImage(winImg, 0, 0, canvas.width, canvas.height);
+		return;
+	}
 	update();
 	draw();
 	requestAnimationFrame(loop);
@@ -34,31 +69,57 @@ function loop() {
 
 requestAnimationFrame(loop);
 
+function drawPlatform(platform) {
+	switch (platform.type) {
+		case 'platform':
+			c.fillStyle = 'blue';
+			break;
+		case 'hazard':
+			c.fillStyle = 'red';
+			break;
+		case 'goal':
+			c.fillStyle = 'green';
+			break;
+		case 'bounce':
+			c.fillStyle = 'yellow';
+			break;
+		case 'start':
+			return;
+		default:
+			c.fillStyle = 'blue';
+			break;
+	}
+	c.fillRect(platform.x, platform.y, platform.width, platform.height);
+}
+
 function draw() {
-	c.clearRect(0, 0, canvas.width, canvas.height);
+	// Fill background (letterbox bars)
+	c.fillStyle = 'black';
+	c.fillRect(0, 0, canvas.width, canvas.height);
+
+	// Transform to virtual coordinates
+	c.save();
+	c.translate(offsetX, offsetY);
+	c.scale(scale, scale);
+
+	// Draw game world
 	const player = game.player;
 	for (const platform of game.platforms) {
-		switch (platform.type) {
-			case 'platform':
-				c.fillStyle = 'blue';
-				break;
-			case 'hazard':
-				c.fillStyle = 'red';
-				break;
-			case 'goal':
-				c.fillStyle = 'green';
-				break;
-			case 'bounce':
-				c.fillStyle = 'yellow';
-				break;
-			default:
-				c.fillStyle = 'blue';
-				break;
-		}
-		c.fillRect(platform.x, platform.y, platform.width, platform.height);
+		drawPlatform(platform);
 	}
-	c.fillStyle = 'red';
+
+	if (editorPlacing.isPlacing) {
+		let x1 = editorPlacing.x;
+		let y1 = editorPlacing.y;
+		let x2 = mouse.x;
+		let y2 = mouse.y;
+		drawPlatform({x: x1, y: y1, width: x2 - x1, height: y2 - y1, type: editorPlacing.type});
+	}
+
+	c.fillStyle = 'orange';
 	c.fillRect(player.position.x, player.position.y, player.width, player.height);
+
+	c.restore();
 }
 
 function update() {
@@ -69,6 +130,7 @@ const keys = {
 	left: false,
 	right: false,
 	jump: false,
+	place: false,
 };
 
 const keymap = {
@@ -78,16 +140,72 @@ const keymap = {
 	a: 'left',
 	d: 'right',
 	w: 'jump',
+	shift: 'place',
+};
+
+const mouse = {
+	x: 0,
+	y: 0,
 };
 
 window.addEventListener('keydown', (e) => {
 	const key = keymap[e.key.toLowerCase()];
 	if (key) keys[key] = true;
+	if (editorMode) {
+		switch (e.key.toLowerCase()) {
+			case 'p':
+				editorPlacing.type = 'platform';
+				break;
+			case 'o':
+				editorPlacing.type = 'hazard';
+				break;
+			case 'g':
+				editorPlacing.type = 'goal';
+				break;
+			case 'b':
+				editorPlacing.type = 'bounce';
+				break;
+			case 'x':
+				navigator.clipboard.writeText(JSON.stringify(platforms));
+		}
+	}
 });
 
 window.addEventListener('keyup', (e) => {
 	const key = keymap[e.key.toLowerCase()];
 	if (key) keys[key] = false;
+});
+
+function toVirtual(x, y) {
+	// Convert screen (pixel) coordinates to virtual game coordinates
+	return {
+		x: (x - offsetX) / scale,
+		y: (y - offsetY) / scale,
+	};
+}
+
+canvas.addEventListener('mousedown', (e) => {
+	const v = toVirtual(e.clientX, e.clientY);
+	if (editorMode) {
+		if (editorPlacing.isPlacing) {
+			editorPlacing.isPlacing = false;
+			let x1 = Math.min(v.x, editorPlacing.x);
+			let x2 = Math.max(v.x, editorPlacing.x);
+			let y1 = Math.min(v.y, editorPlacing.y);
+			let y2 = Math.max(v.y, editorPlacing.y);
+			game.platforms.push({x: x1, y: y1, width: x2 - x1, height: y2 - y1, type: editorPlacing.type});
+		} else if (keys['place']) {
+			editorPlacing.isPlacing = true;
+			editorPlacing.x = v.x;
+			editorPlacing.y = v.y;
+		}
+	}
+});
+
+canvas.addEventListener('mousemove', (e) => {
+	const v = toVirtual(e.clientX, e.clientY);
+	mouse.x = v.x;
+	mouse.y = v.y;
 });
 
 function physics() {
@@ -137,15 +255,25 @@ function collideSpecial() {
 		if (player.position.x < platform.x + platform.width && player.position.x + player.width > platform.x && player.position.y < platform.y + platform.height && player.position.y + player.height > platform.y) {
 			switch (platform.type) {
 				case 'hazard':
-					// Reset player position on hazard collision
+					player.position = {x: playerStartPos.x, y: playerStartPos.y};
+					player.velocity = {x: 0, y: 0};
 					break;
 				case 'goal':
-					// Handle goal collision (e.g., level complete)
+					currentLevel++;
+					if (currentLevel >= platforms.length) {
+						game.win = true;
+						return;
+					}
+					game.platforms = platforms[currentLevel];
+					game.player.position = {x: game.platforms[0].x, y: game.platforms[0].y};
+					game.player.velocity = {x: 0, y: 0};
 					break;
 				case 'bounce':
 					player.velocity.y = -player.jumpStrength * 1.5;
 					player.onGround = false;
 					player.coyote = 0;
+					break;
+				case 'start':
 					break;
 				default:
 					console.warn(`u suck at building: ${platform.type}`);
