@@ -9,13 +9,8 @@ function resizeCanvas() {
 window.addEventListener('resize', resizeCanvas);
 resizeCanvas();
 
-function loop() {
-	update();
-	draw();
-	requestAnimationFrame(loop);
-}
-
-requestAnimationFrame(loop);
+const res = await fetch('platforms.json');
+const platforms = await res.json();
 
 const game = {
 	player: {
@@ -28,19 +23,38 @@ const game = {
 		onGround: false,
 		coyote: 0,
 	},
-	platforms: [
-		{x: 0, y: 800, width: 2000, height: 20},
-		{x: 300, y: 700, width: 100, height: 100},
-		{x: 800, y: 600, width: 100, height: 200},
-		{x: 400, y: 600, width: 200, height: 20},
-	],
+	platforms: platforms,
 };
+
+function loop() {
+	update();
+	draw();
+	requestAnimationFrame(loop);
+}
+
+requestAnimationFrame(loop);
 
 function draw() {
 	c.clearRect(0, 0, canvas.width, canvas.height);
 	const player = game.player;
-	c.fillStyle = 'blue';
 	for (const platform of game.platforms) {
+		switch (platform.type) {
+			case 'platform':
+				c.fillStyle = 'blue';
+				break;
+			case 'hazard':
+				c.fillStyle = 'red';
+				break;
+			case 'goal':
+				c.fillStyle = 'green';
+				break;
+			case 'bounce':
+				c.fillStyle = 'yellow';
+				break;
+			default:
+				c.fillStyle = 'blue';
+				break;
+		}
 		c.fillRect(platform.x, platform.y, platform.width, platform.height);
 	}
 	c.fillStyle = 'red';
@@ -48,7 +62,6 @@ function draw() {
 }
 
 function update() {
-	const player = game.player;
 	physics();
 }
 
@@ -79,6 +92,9 @@ window.addEventListener('keyup', (e) => {
 
 function physics() {
 	const player = game.player;
+
+	collideSpecial();
+
 	if (keys.left) {
 		player.velocity.x -= player.speed;
 	}
@@ -115,9 +131,33 @@ function physics() {
 	player.position.y += player.velocity.y;
 }
 
+function collideSpecial() {
+	const player = game.player;
+	for (const platform of game.platforms.filter((p) => p.type !== 'platform')) {
+		if (player.position.x < platform.x + platform.width && player.position.x + player.width > platform.x && player.position.y < platform.y + platform.height && player.position.y + player.height > platform.y) {
+			switch (platform.type) {
+				case 'hazard':
+					// Reset player position on hazard collision
+					break;
+				case 'goal':
+					// Handle goal collision (e.g., level complete)
+					break;
+				case 'bounce':
+					player.velocity.y = -player.jumpStrength * 1.5;
+					player.onGround = false;
+					player.coyote = 0;
+					break;
+				default:
+					console.warn(`u suck at building: ${platform.type}`);
+					break;
+			}
+		}
+	}
+}
+
 function collideFloor() {
 	const player = game.player;
-	for (const platform of game.platforms) {
+	for (const platform of game.platforms.filter((p) => p.type === 'platform')) {
 		if (player.position.x < platform.x + platform.width && player.position.x + player.width > platform.x && player.position.y + Math.max(player.velocity.y, 10) < platform.y + platform.height && player.position.y + Math.max(player.velocity.y, 10) + player.height > platform.y && player.velocity.y >= 0) {
 			player.position.y = platform.y - player.height;
 			return true;
@@ -129,7 +169,7 @@ function collideFloor() {
 function collideWalls() {
 	const player = game.player;
 	player.position.x += player.velocity.x;
-	for (const platform of game.platforms) {
+	for (const platform of game.platforms.filter((p) => p.type === 'platform')) {
 		if (player.position.y < platform.y + platform.height && player.position.y + player.height > platform.y) {
 			if (player.position.x + player.width > platform.x && player.position.x < platform.x) {
 				player.position.x = platform.x - player.width;
@@ -145,7 +185,7 @@ function collideWalls() {
 
 function collideCeilings() {
 	const player = game.player;
-	for (const platform of game.platforms) {
+	for (const platform of game.platforms.filter((p) => p.type === 'platform')) {
 		if (player.position.x < platform.x + platform.width && player.position.x + player.width > platform.x && player.position.y + Math.min(player.velocity.y, -10) < platform.y + platform.height && player.position.y + Math.min(player.velocity.y, -10) + player.height > platform.y && player.velocity.y < 0) {
 			player.position.y = platform.y + platform.height;
 			return true;
