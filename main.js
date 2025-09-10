@@ -8,11 +8,14 @@ let scale = 1;
 let offsetX = 0;
 let offsetY = 0;
 
+//RAAH I DONT KNOW WHAT TO DO FOR THE LAST HOUR
+//i got all the mechanics done ig ill just do levels
+
 const winImg = new Image();
 winImg.src = 'win.png';
 
 const winHardmodeImg = new Image();
-winHardmodeImg.src = 'win-hard.png';
+winHardmodeImg.src = 'win-hardmode.png';
 
 const startButton = document.getElementById('startButton');
 const hardmodeButton = document.getElementById('hardmodeButton');
