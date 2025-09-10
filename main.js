@@ -202,8 +202,7 @@ window.addEventListener('keyup', (e) => {
 	if (key) keys[key] = false;
 });
 
-function toVirtual(x, y) {
-	// Convert screen (pixel) coordinates to virtual game coordinates
+function toWorldCoords(x, y) {
 	return {
 		x: (x - offsetX) / scale,
 		y: (y - offsetY) / scale,
@@ -211,7 +210,7 @@ function toVirtual(x, y) {
 }
 
 canvas.addEventListener('mousedown', (e) => {
-	const v = toVirtual(e.clientX, e.clientY);
+	const v = toWorldCoords(e.clientX, e.clientY);
 	if (editorMode) {
 		if (editorPlacing.isPlacing) {
 			editorPlacing.isPlacing = false;
@@ -229,7 +228,7 @@ canvas.addEventListener('mousedown', (e) => {
 });
 
 canvas.addEventListener('mousemove', (e) => {
-	const v = toVirtual(e.clientX, e.clientY);
+	const v = toWorldCoords(e.clientX, e.clientY);
 	mouse.x = v.x;
 	mouse.y = v.y;
 });
@@ -242,9 +241,11 @@ function physics() {
 	if (keys.left) {
 		player.velocity.x -= player.speed * deltaTime;
 	}
+
 	if (keys.right) {
 		player.velocity.x += player.speed * deltaTime;
 	}
+
 	player.velocity.x *= player.onGround ? 0.8 : 0.85;
 	if (Math.abs(player.velocity.x) < 0.1) player.velocity.x = 0;
 
