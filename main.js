@@ -56,7 +56,7 @@ let editorPlacing = {
 
 const platforms = [];
 const levelcount = 3; //number of levels available
-let currentLevel = 3;
+let currentLevel = 0;
 
 for (let i = 0; i <= levelcount; i++) {
 	const res = await fetch(`l${i}.json`);
