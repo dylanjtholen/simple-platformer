@@ -51,12 +51,12 @@ let editorPlacing = {
 	x: 0,
 	y: 0,
 	isPlacing: false,
-	type: 'platform',
+	type: 'bounce',
 };
 
 const platforms = [];
-const levelcount = 2; //number of levels available
-let currentLevel = 0;
+const levelcount = 3; //number of levels available
+let currentLevel = 3;
 
 for (let i = 0; i <= levelcount; i++) {
 	const res = await fetch(`l${i}.json`);
@@ -104,7 +104,7 @@ function drawPlatform(platform) {
 			c.fillStyle = 'blue';
 			break;
 		case 'hazard':
-			c.fillStyle = 'red';
+			c.fillStyle = 'orange';
 			break;
 		case 'goal':
 			c.fillStyle = 'green';
@@ -145,7 +145,7 @@ function draw() {
 		drawPlatform({x: x1, y: y1, width: x2 - x1, height: y2 - y1, type: editorPlacing.type});
 	}
 
-	c.fillStyle = 'orange';
+	c.fillStyle = 'red';
 	c.fillRect(player.position.x, player.position.y, player.width, player.height);
 
 	c.restore();
@@ -169,6 +169,9 @@ const keymap = {
 	a: 'left',
 	d: 'right',
 	w: 'jump',
+	i: 'jump',
+	j: 'left',
+	l: 'right',
 	shift: 'place',
 };
 
@@ -277,6 +280,19 @@ function physics() {
 	}
 
 	player.position.y += player.velocity.y * deltaTime;
+
+	// Death plane: if player falls below the world, reset as if hit a hazard
+	if (player.position.y > VIRTUAL_HEIGHT + 200) {
+		if (game.hardmode) {
+			currentLevel = 0;
+			game.platforms = platforms[currentLevel];
+			game.player.position = {x: game.platforms[0].x, y: game.platforms[0].y};
+			game.player.velocity = {x: 0, y: 0};
+		} else {
+			player.position = {x: game.platforms[0].x, y: game.platforms[0].y};
+			player.velocity = {x: 0, y: 0};
+		}
+	}
 }
 
 function collideSpecial() {
